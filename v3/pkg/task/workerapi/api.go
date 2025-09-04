@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/RichardKnop/machinery/v2/log"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/sirupsen/logrus"
-	"time"
 
 	"github.com/RichardKnop/machinery/v2/backends/result"
 	"github.com/RichardKnop/machinery/v2/tasks"
@@ -32,9 +33,6 @@ var taskMaps = map[string]interface{}{
 	"fingerprint": Fingerprint,
 	"nuclei":      PocScan,
 	"zombie":      PocScan,
-	"qwen":        LLMScan,
-	"kimi":        LLMScan,
-	"deepseek":    LLMScan,
 	//test:
 	"test": TaskTest,
 }
@@ -81,7 +79,7 @@ func StartWorker(topicName string, concurrency int) error {
 	log.Set(logger)
 	logging.RuntimeLog.Infof("starting worker: %s", WStatus.WorkerName)
 	logging.CLILog.Infof("starting worker: %s", WStatus.WorkerName)
-	worker.Quit()
+
 	return worker.Launch()
 }
 
