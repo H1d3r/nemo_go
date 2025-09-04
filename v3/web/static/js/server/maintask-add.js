@@ -36,12 +36,108 @@ $(function () {
         e.preventDefault();
         save_maintask_data();
     });
+    $('#parseTarget').click(function () {
+        parse_target();
+    });
 });
 
-function process_form_data() {
-    const target = $('#target').val();
+function parse_target() {
+    let target = $('#target').val();
     if (!isNotEmpty(target)) {
         alert("目标不能为空！");
+        return null;
+    }
+    target = target.replace(/\r/g, "").replace(/\n/g, ",")
+    $.ajax({
+        type: 'POST',
+        url: '/maintask-parse-target',
+        data: {target: target, isTldRootDomain: $('#is_tld_root_domain').is(':checked'),},
+        success: function (data) {
+            if (data['ip']?.length > 0) {
+                $('#target_ip').val(data['ip'].join('\n'));
+                $('#target_ip_count').text(data['ip'].length);
+            } else {
+                $('#target_ip').val('');
+                $('#target_ip_count').text('0');
+            }
+            if (data['rootDomain']?.length > 0) {
+                $('#target_root_domain').val(data['rootDomain'].join('\n'));
+                $('#target_root_domain_count').text(data['rootDomain'].length);
+            } else {
+                $('#target_root_domain').val('');
+                $('#target_root_domain_count').text('0')
+            }
+            if (data['subDomain']?.length > 0) {
+                $('#target_sub_domain').val(data['subDomain'].join('\n'));
+                $('#target_sub_domain_count').text(data['subDomain'].length);
+            } else {
+                $('#target_sub_domain').val('');
+                $('#target_sub_domain_count').text('0');
+            }
+            if (data['url']?.length > 0) {
+                $('#target_url').val(data['url'].join('\n'));
+                $('#target_url_count').text(data['url'].length);
+            } else {
+                $('#target_url').val('');
+                $('#target_url_count').text('0');
+            }
+            if (data['unit']?.length > 0) {
+                $('#target_unit').val(data['unit'].join('\n'));
+                $('#target_unit_count').text(data['unit'].length);
+            } else {
+                $('#target_unit').val('');
+                $('#target_unit_count').text('0');
+            }
+            if (data['endpoint']?.length > 0) {
+                $('#target_endpoint').val(data['endpoint'].join('\n'));
+                $('#target_endpoint_count').text(data['endpoint'].length);
+            } else {
+                $('#target_endpoint').val('');
+                $('#target_endpoint_count').text('0');
+            }
+        },
+        error: function (xhr, status, error) {
+            swal('失败', '请求失败: ' + error, 'error');
+        }
+    });
+}
+
+
+function process_form_data() {
+    let target_map = {};
+    const target_ip = $('#target_ip').val().trim();
+    let target_is_empty = true;
+    if (isNotEmpty(target_ip)) {
+        target_is_empty = false;
+        target_map['ip'] = target_ip.replace(/\r/g, "").replace(/\n/g, ",");
+    }
+    const target_root_domain = $('#target_root_domain').val().trim();
+    if (isNotEmpty(target_root_domain)) {
+        target_is_empty = false;
+        target_map['rootDomain'] = target_root_domain.replace(/\r/g, "").replace(/\n/g, ",");
+    }
+    const target_sub_domain = $('#target_sub_domain').val().trim();
+    if (isNotEmpty(target_sub_domain)) {
+        target_is_empty = false;
+        target_map['subDomain'] = target_sub_domain.replace(/\r/g, "").replace(/\n/g, ",");
+    }
+    const target_url = $('#target_url').val().trim();
+    if (isNotEmpty(target_url)) {
+        target_is_empty = false;
+        target_map['url'] = target_url.replace(/\r/g, "").replace(/\n/g, ",");
+    }
+    const target_unit = $('#target_unit').val().trim();
+    if (isNotEmpty(target_unit)) {
+        target_is_empty = false;
+        target_map['unit'] = target_unit.replace(/\r/g, "").replace(/\n/g, ",");
+    }
+    const target_endpoint = $('#target_endpoint').val().trim();
+    if (isNotEmpty(target_endpoint)) {
+        target_is_empty = false;
+        target_map['endpoint'] = target_endpoint.replace(/\r/g, "").replace(/\n/g, ",");
+    }
+    if (target_is_empty) {
+        alert("至少输入一种有效的目标类型，或者“智能解析目标”进行目标分类解析！");
         return null;
     }
     // 获取选中的 profile_name 和 profile_id
@@ -54,7 +150,7 @@ function process_form_data() {
         description: $('#description').val(),
         profile_name: profileName,
         profile_id: profileId,
-        target: target.replace(/\r/g, "").replace(/\n/g, ","),
+        target: JSON.stringify(target_map),
         exclude_target: $('#exclude_target').val(),
         target_split: parseInt($('#target_split').val(), 10),
         target_split_num: parseInt($('#target_split_num').val(), 10),
@@ -76,7 +172,7 @@ function process_form_data() {
         alert("目标不能为空！");
         return null;
     }
-    if (mainTaskInfoData.target_split !==0 && mainTaskInfoData.target_split_num < 1) {
+    if (mainTaskInfoData.target_split !== 0 && mainTaskInfoData.target_split_num < 1) {
         alert("拆分数量必须大于等于1！");
         return null;
     }
@@ -93,10 +189,10 @@ function fill_form_with_data(data) {
         // icp部分
         if (data.icp.enabled) {
             $('#div_icp').show();
-            $('#chinaz').prop('checked', data.icp?.chinaz||false);
-            $('#beianx').prop('checked', data.icp?.beianx||false);
-            $('#query_type_icpPlus').prop('checked', data.icp?.icpPlus||false);
-            $('#query_type_icpPlus2').prop('checked', data.icp?.icpPlus2||false);
+            $('#chinaz').prop('checked', data.icp?.chinaz || false);
+            $('#beianx').prop('checked', data.icp?.beianx || false);
+            $('#query_type_icpPlus').prop('checked', data.icp?.icpPlus || false);
+            $('#query_type_icpPlus2').prop('checked', data.icp?.icpPlus2 || false);
             $('#icp_autoAssociateOrg').prop('checked', data.icp.config?.autoAssociateOrg || false);
         } else {
             $('#div_icp').hide();

@@ -4,6 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
+	"net"
+	"strconv"
+	"strings"
+	"time"
+	"unicode"
+
 	"github.com/RichardKnop/machinery/v2/tasks"
 	"github.com/google/uuid"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
@@ -12,9 +19,6 @@ import (
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"math/rand"
-	"strings"
-	"time"
 )
 
 const (
@@ -176,7 +180,7 @@ func processCreatedTask() {
 			return
 		}
 		mainTaskInfo := execute.MainTaskInfo{
-			Target:          doc.Target,
+			TargetMap:       utils.UnmarshalTargetMap(doc.Target),
 			ExcludeTarget:   doc.ExcludeTarget,
 			ExecutorConfig:  exeConfig,
 			OrgId:           doc.OrgId,
@@ -220,118 +224,130 @@ func processExecutorTask(mainTaskInfo execute.MainTaskInfo) (err error) {
 		}
 		return nil
 	}
-	var succeedTask int
-
-	ts := NewTaskSlice(mainTaskInfo.Target, mainTaskInfo.TargetSliceType, mainTaskInfo.TargetSliceNum)
-	targets := ts.SplitTargets()
-	// ip、域名、OnlineAPI、Standalone任务，是top任务，可以直接开始、并行开始的
-	if len(mainTaskInfo.ExecutorConfig.Standalone) > 0 {
+	handleFingerprintAndPocscan := func(typeKey string, mainTaskInfo execute.MainTaskInfo) (err error) {
+		ts := NewTaskSlice(mainTaskInfo.TargetMap[typeKey], mainTaskInfo.TargetSliceType, mainTaskInfo.TargetSliceNum)
+		targets := ts.SplitTargets()
 		for _, target := range targets {
 			mti := mainTaskInfo
-			mti.Target = target
-			for executor := range mainTaskInfo.ExecutorConfig.Standalone {
-				if err = f(executor, mti); err != nil {
-					return err
-				}
-				succeedTask++
-			}
-		}
-	}
-	// ICP/llmapi任务，是top任务，可以直接开始、并行开始的
-	if len(mainTaskInfo.ExecutorConfig.ICP) > 0 {
-		for _, target := range targets {
-			for executor := range mainTaskInfo.ExecutorConfig.ICP {
-				mti := mainTaskInfo
-				mti.Target = target
-				if err = f(executor, mti); err != nil {
-					return err
-				}
-				succeedTask++
-			}
-		}
-	} else if len(mainTaskInfo.ExecutorConfig.LLMAPI) > 0 {
-		for _, target := range targets {
-			for executor := range mainTaskInfo.ExecutorConfig.LLMAPI {
-				mti := mainTaskInfo
-				mti.Target = target
-				if err = f(executor, mti); err != nil {
-					return err
-				}
-				succeedTask++
-			}
-		}
-	} else {
-		if len(mainTaskInfo.ExecutorConfig.DomainScan) > 0 {
-			for _, target := range targets {
-				mti := mainTaskInfo
-				mti.Target = target
-				for executor := range mainTaskInfo.ExecutorConfig.DomainScan {
-					if err = f(executor, mti); err != nil {
-						return err
-					}
-					succeedTask++
-				}
-			}
-		}
-		if len(mainTaskInfo.ExecutorConfig.OnlineAPI) > 0 {
-			for executor := range mainTaskInfo.ExecutorConfig.OnlineAPI {
-				for _, target := range targets {
-					mti := mainTaskInfo
-					mti.Target = target
-					if err = f(executor, mti); err != nil {
-						return err
-					}
-					succeedTask++
-				}
-			}
-		}
-	}
-	if len(mainTaskInfo.ExecutorConfig.PortScan) > 0 {
-		for _, target := range targets {
-			mti := mainTaskInfo
-			mti.Target = target
-			for executor, config := range mainTaskInfo.ExecutorConfig.PortScan {
-				// 有端口拆分
-				if config.SliceNumber > 0 {
-					portSliceArray := utils.SplitPort(config.Port, config.SliceNumber)
-					for _, portSlice := range portSliceArray {
-						mtiBySlicePort := mti
-						config.Port = portSlice
-						mtiBySlicePort.PortScan[executor] = config
-						if err = f(executor, mtiBySlicePort); err != nil {
-							return err
-						}
-						succeedTask++
-					}
-				} else {
-					if err = f(executor, mti); err != nil {
-						return err
-					}
-					succeedTask++
-				}
-			}
-		}
-	}
-	// fingerprint、pocscan任务，是需要等前面的任务执行完成后再开始的；或者前面没有任务，直接开始执行
-	if succeedTask == 0 {
-		if len(mainTaskInfo.ExecutorConfig.FingerPrint) > 0 {
-			for _, target := range targets {
-				mti := mainTaskInfo
-				mti.Target = target
+			mti.TargetMap = make(map[string]string)
+			mti.TargetMap[typeKey] = target
+			//　如果同时有fingerprint和pocscan，则先执行fingerprint，pocscan在fingerprint执行完成后由任务启动下一个流程执行
+			if len(mainTaskInfo.ExecutorConfig.FingerPrint) > 0 {
 				// fingerprint不区分executor，由执行行时根据任务配置决定
 				if err = f(execute.FingerPrint, mti); err != nil {
 					return err
 				}
+			} else {
+				for executor := range mainTaskInfo.ExecutorConfig.PocScan {
+					if err = f(executor, mti); err != nil {
+						return err
+					}
+				}
 			}
-		} else {
-			if len(mainTaskInfo.ExecutorConfig.PocScan) > 0 {
-				for _, target := range targets {
-					mti := mainTaskInfo
-					mti.Target = target
-					for executor := range mainTaskInfo.ExecutorConfig.PocScan {
-						if err = f(executor, mti); err != nil {
-							return err
-						}
+		}
+		return nil
+	}
+	// 单独的standalone任务
+	if len(mainTaskInfo.ExecutorConfig.Standalone) > 0 {
+		ts := NewTaskSlice(mainTaskInfo.TargetMap[execute.TargetIp], mainTaskInfo.TargetSliceType, mainTaskInfo.TargetSliceNum)
+		targets := ts.SplitTargets()
+		for _, target := range targets {
+			mti := mainTaskInfo
+			mti.TargetMap = make(map[string]string)
+			mti.TargetMap[execute.TargetIp] = target
+			for executor := range mainTaskInfo.ExecutorConfig.Standalone {
+				if err = f(executor, mti); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	// ip任务：portscan、onlineapi
+	if mainTaskInfo.TargetMap[execute.TargetIp] != "" {
+		ts := NewTaskSlice(mainTaskInfo.TargetMap[execute.TargetIp], mainTaskInfo.TargetSliceType, mainTaskInfo.TargetSliceNum)
+		targets := ts.SplitTargets()
+		for _, target := range targets {
+			mti := mainTaskInfo
+			mti.TargetMap = make(map[string]string)
+			mti.TargetMap[execute.TargetIp] = target
+			for executor := range mainTaskInfo.ExecutorConfig.PortScan {
+				if err = f(executor, mti); err != nil {
+					return err
+				}
+			}
+			for executor := range mainTaskInfo.ExecutorConfig.OnlineAPI {
+				if err = f(executor, mti); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	// 主域名任务：domainscan、onlineapi、icpPlus2
+	if mainTaskInfo.TargetMap[execute.TargetRootDomain] != "" {
+		ts := NewTaskSlice(mainTaskInfo.TargetMap[execute.TargetRootDomain], mainTaskInfo.TargetSliceType, mainTaskInfo.TargetSliceNum)
+		targets := ts.SplitTargets()
+		for _, target := range targets {
+			mti := mainTaskInfo
+			mti.TargetMap = make(map[string]string)
+			mti.TargetMap[execute.TargetRootDomain] = target
+			for executor := range mainTaskInfo.ExecutorConfig.DomainScan {
+				if err = f(executor, mti); err != nil {
+					return err
+				}
+			}
+			for executor := range mainTaskInfo.ExecutorConfig.OnlineAPI {
+				if err = f(executor, mti); err != nil {
+					return err
+				}
+			}
+			for executor := range mainTaskInfo.ExecutorConfig.ICP {
+				if executor == "icpPlus2" {
+					if err = f(executor, mti); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	// 子域名任务：domainscan
+	if mainTaskInfo.TargetMap[execute.TargetSubDomain] != "" {
+		ts := NewTaskSlice(mainTaskInfo.TargetMap[execute.TargetSubDomain], mainTaskInfo.TargetSliceType, mainTaskInfo.TargetSliceNum)
+		targets := ts.SplitTargets()
+		for _, target := range targets {
+			mti := mainTaskInfo
+			mti.TargetMap = make(map[string]string)
+			mti.TargetMap[execute.TargetSubDomain] = target
+			for executor := range mainTaskInfo.ExecutorConfig.DomainScan {
+				if err = f(executor, mti); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// endpoint任务：fingerprint、pocscan
+	if mainTaskInfo.TargetMap[execute.TargetEndpoint] != "" {
+		if err = handleFingerprintAndPocscan(execute.TargetEndpoint, mainTaskInfo); err != nil {
+			return err
+		}
+	}
+	// url任务：fingerprint、pocscan
+	if mainTaskInfo.TargetMap[execute.TargetUrl] != "" {
+		if err = handleFingerprintAndPocscan(execute.TargetUrl, mainTaskInfo); err != nil {
+			return err
+		}
+	}
+	// unit任务：icpPlus
+	if mainTaskInfo.TargetMap[execute.TargetUnit] != "" {
+		ts := NewTaskSlice(mainTaskInfo.TargetMap[execute.TargetUnit], mainTaskInfo.TargetSliceType, mainTaskInfo.TargetSliceNum)
+		targets := ts.SplitTargets()
+		for _, target := range targets {
+			mti := mainTaskInfo
+			mti.TargetMap[execute.TargetUnit] = target
+			for executor := range mainTaskInfo.ExecutorConfig.ICP {
+				if executor == "icpPlus" {
+					if err = f(executor, mti); err != nil {
+						return err
 					}
 				}
 			}
@@ -492,13 +508,13 @@ func computeMainTaskProgressRate(mainTaskId string, args string) (result float64
 
 func NewExecutorTask(executorTaskInfo execute.ExecutorTaskInfo) (err error) {
 	// 检查目标中是否有黑名单
-	blackTarget, normalTarget := checkTargetForBlacklist(executorTaskInfo.Target, executorTaskInfo.WorkspaceId)
+	blackTarget, newTargetMap := checkTargetMapForBlacklist(executorTaskInfo.TargetMap, executorTaskInfo.WorkspaceId)
 	// 黑名单处理
 	if len(blackTarget) > 0 {
 		logging.RuntimeLog.Warnf("匹配到黑名单记录: %s, skip", strings.Join(blackTarget, ","))
 	}
 	// 正常目标处理
-	executorTaskInfo.Target = strings.Join(normalTarget, ",")
+	executorTaskInfo.TargetMap = newTargetMap
 	//　standalone任务不送入消息队列，只写入数据库；其他任务送入消息队列
 	if executorTaskInfo.Executor != "standalone" {
 		if err = sendExecutorTaskToMq(executorTaskInfo); err != nil {
@@ -511,24 +527,34 @@ func NewExecutorTask(executorTaskInfo execute.ExecutorTaskInfo) (err error) {
 	return nil
 }
 
-func checkTargetForBlacklist(target string, workspaceId string) (blacklist, normal []string) {
+func checkTargetMapForBlacklist(targetMap map[string]string, workspaceId string) (blacklist []string, targetMapNew map[string]string) {
+	targetMapNew = make(map[string]string)
 	blc := NewBlacklist()
 	blc.LoadBlacklist(workspaceId)
-	// 检查目标中是否有黑名单
-	for _, t := range strings.Split(target, ",") {
-		targetStripped := strings.TrimSpace(t)
-		if targetStripped == "" {
+	for k, v := range targetMap {
+		if len(v) == 0 {
 			continue
 		}
-		hostPort := strings.Split(targetStripped, ":")
-		if len(hostPort) == 0 {
-			continue
+		var targetNew []string
+		// 检查目标中是否有黑名单
+		for _, t := range strings.Split(v, ",") {
+			targetStripped := strings.TrimSpace(t)
+			if targetStripped == "" {
+				continue
+			}
+			hostPort := strings.Split(targetStripped, ":")
+			if len(hostPort) == 0 {
+				continue
+			}
+			host := hostPort[0]
+			if blc.IsHostBlocked(host) {
+				blacklist = append(blacklist, targetStripped)
+			} else {
+				targetNew = append(targetNew, targetStripped)
+			}
 		}
-		host := hostPort[0]
-		if blc.IsHostBlocked(host) {
-			blacklist = append(blacklist, targetStripped)
-		} else {
-			normal = append(normal, targetStripped)
+		if len(targetNew) > 0 {
+			targetMapNew[k] = strings.Join(targetNew, ",")
 		}
 	}
 	return
@@ -575,7 +601,7 @@ func addExecutorTaskToDb(executorTaskInfo execute.ExecutorTaskInfo) error {
 		MainTaskId:    executorTaskInfo.MainTaskId,
 		PreTaskId:     executorTaskInfo.PreTaskId,
 		Executor:      executorTaskInfo.Executor,
-		Target:        executorTaskInfo.Target,
+		Target:        utils.MarshalTargetMap(executorTaskInfo.TargetMap),
 		ExcludeTarget: executorTaskInfo.ExcludeTarget,
 		Status:        CREATED,
 	}
@@ -658,4 +684,244 @@ func updateMainTask(id string, state string, progress string, progressRate float
 		return false
 	}
 	return isSuccess
+}
+
+func ParseStringTargetToTargetMap(targetStr string, isTldRootDomain bool) (targetMap map[string][]string) {
+	targetMap = make(map[string][]string)
+	targetMapSet := make(map[string]map[string]struct{})
+	targetMapSet[execute.TargetIp] = make(map[string]struct{})
+	targetMapSet[execute.TargetRootDomain] = make(map[string]struct{})
+	targetMapSet[execute.TargetSubDomain] = make(map[string]struct{})
+	targetMapSet[execute.TargetUrl] = make(map[string]struct{})
+	targetMapSet[execute.TargetEndpoint] = make(map[string]struct{})
+	targetMapSet[execute.TargetUnit] = make(map[string]struct{})
+	tld := utils.NewTldExtract()
+
+	for _, t := range strings.Split(targetStr, ",") {
+		target := strings.TrimSpace(t)
+		if target == "" {
+			continue
+		}
+		if utils.CheckIPOrSubnet(target) {
+			targetMapSet[execute.TargetIp][target] = struct{}{}
+			continue
+		}
+		if utils.CheckDomain(target) {
+			domainTldFromTarget := tld.ExtractFLD(target)
+			if domainTldFromTarget == target {
+				targetMapSet[execute.TargetRootDomain][target] = struct{}{}
+			} else {
+				targetMapSet[execute.TargetSubDomain][target] = struct{}{}
+				if isTldRootDomain {
+					targetMapSet[execute.TargetRootDomain][domainTldFromTarget] = struct{}{}
+				}
+			}
+			continue
+		}
+		if CheckURL(target) {
+			targetMapSet[execute.TargetUrl][target] = struct{}{}
+			continue
+		}
+		if CheckEndpoint(target) {
+			targetMapSet[execute.TargetEndpoint][target] = struct{}{}
+			continue
+		}
+		if CheckCompanyName(target) {
+			targetMapSet[execute.TargetUnit][target] = struct{}{}
+			continue
+		}
+		logging.RuntimeLog.Warnf("目标格式错误: %s", target)
+	}
+	for k, v := range targetMapSet {
+		if len(v) > 0 {
+			targetMap[k] = utils.SetToSlice(v)
+		}
+	}
+	return targetMap
+}
+
+// CheckURL 检查字符串是否为有效的URL格式（仅验证协议前缀）
+// 参数：url - 要检查的字符串
+// 返回值：如果是有效的URL格式返回true，否则返回false
+func CheckURL(url string) bool {
+	// 完整的常用URL协议列表
+	urlPrefixes := []string{
+		// 网络协议
+		"http://", "https://",
+		"ftp://", "ftps://",
+		"ws://", "wss://", // WebSocket
+		"rtsp://", "rtmp://", // 流媒体
+		"udp://", "tcp://",
+
+		// 文件相关
+		"file://",
+		"smb://", // Samba共享
+		"nfs://", // 网络文件系统
+
+		// 邮件相关
+		"mailto:", "smtp://",
+		"imap://", "pop3://",
+
+		// 数据库
+		"mysql://", "postgres://",
+		"mongodb://", "redis://",
+
+		// 消息队列
+		"amqp://", "mqtt://",
+		"kafka://",
+
+		// 云存储
+		"s3://", // AWS S3
+		"gs://", // Google Cloud Storage
+		"az://", // Azure Blob Storage
+
+		// 特殊协议
+		"telnet://", "ssh://",
+		"git://", "svn://",
+		"ldap://", "ldaps://",
+		"irc://", "ircs://",
+
+		// 移动应用
+		"whatsapp://", "wechat://",
+	}
+
+	lowerURL := strings.ToLower(url)
+
+	for _, prefix := range urlPrefixes {
+		if strings.HasPrefix(lowerURL, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// CheckCompanyName 检查输入字符串是否可能为公司或组织名称（宽松版本）
+// 适用于准确性要求不高的场景，如初步筛选、表单验证等
+func CheckCompanyName(name string) bool {
+	name = strings.TrimSpace(name)
+
+	// 基本长度检查
+	if len(name) < 2 || len(name) > 100 {
+		return false
+	}
+
+	// 不能全部是数字、符号或空格
+	if isAllNonLetters(name) {
+		return false
+	}
+
+	// 必须包含至少2个字母或汉字
+	if !containsSufficientLetters(name) {
+		return false
+	}
+
+	// 检查是否包含常见公司标识词（宽松匹配）
+	return containsCompanyIndicators(name)
+}
+
+// 常见公司组织标识词（中英文）
+var companyIndicators = []string{
+	// 中文标识
+	"公司", "有限", "股份", "集团", "控股", "实业", "科技", "技术",
+	"信息", "网络", "软件", "智能", "咨询", "管理", "服务", "发展",
+	"投资", "金融", "证券", "银行", "保险", "基金", "租赁", "经纪",
+	"事务所", "协会", "学会", "基金会", "中心", "研究院", "研究所",
+	"实验室", "俱乐部", "联盟", "商会", "促进会", "联合会", "委员会",
+	"企业", "工厂", "商店", "超市", "商场", "酒店", "饭店", "餐饮",
+	"贸易", "商贸", "商业", "商务", "电子", "电器", "机械", "设备",
+	"制造", "工程", "建设", "建筑", "装饰", "设计", "广告", "传媒",
+	"文化", "教育", "培训", "学校", "学院", "大学", "医院", "医疗",
+	"医药", "健康", "环保", "能源", "电力", "化工", "材料", "物流",
+	"运输", "快递", "航空", "旅游", "房地产", "物业", "农业",
+
+	// 英文标识
+	"inc", "ltd", "llc", "corp", "co", "gmbh", "ag", "group",
+	"holdings", "limited", "incorporated", "corporation", "company",
+	"international", "global", "enterprises", "ventures", "partners",
+	"tech", "technology", "software", "network", "digital", "solution",
+	"service", "financial", "investment", "capital", "management",
+	"consulting", "development", "research", "laboratory", "institute",
+}
+
+// isAllNonLetters 检查是否全是非字母字符
+func isAllNonLetters(s string) bool {
+	for _, char := range s {
+		if unicode.IsLetter(char) {
+			return false
+		}
+	}
+	return true
+}
+
+// containsSufficientLetters 检查是否包含足够的字母/汉字
+func containsSufficientLetters(s string) bool {
+	count := 0
+	for _, char := range s {
+		if unicode.IsLetter(char) {
+			count++
+			if count >= 2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// containsCompanyIndicators 检查是否包含公司组织标识词
+func containsCompanyIndicators(name string) bool {
+	lowerName := strings.ToLower(name)
+
+	for _, indicator := range companyIndicators {
+		if strings.Contains(lowerName, indicator) {
+			return true
+		}
+	}
+
+	// 如果没有匹配到标识词，但格式看起来像公司名，也返回true
+	return looksLikeCompanyName(name)
+}
+
+// looksLikeCompanyName 通过简单规则判断是否像公司名称
+func looksLikeCompanyName(name string) bool {
+	// 包含空格或点，且长度适中
+	if strings.Contains(name, " ") || strings.Contains(name, ".") || strings.Contains(name, "·") {
+		return len(name) >= 4 && len(name) <= 60
+	}
+
+	// 中文名称通常不包含空格但有一定长度
+	if containsChinese(name) && len(name) >= 4 {
+		return true
+	}
+
+	return false
+}
+
+// containsChinese 检查是否包含中文字符
+func containsChinese(s string) bool {
+	for _, char := range s {
+		if unicode.In(char, unicode.Han) {
+			return true
+		}
+	}
+	return false
+}
+
+func CheckEndpoint(endpoint string) bool {
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return false
+	}
+
+	// 检查host是否有效
+	if host == "" {
+		return false
+	}
+
+	// 检查port是否有效
+	portNum, err := strconv.Atoi(port)
+	if err != nil || portNum < 1 || portNum > 65535 {
+		return false
+	}
+
+	return true
 }

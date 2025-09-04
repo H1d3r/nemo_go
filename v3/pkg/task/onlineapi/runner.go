@@ -3,13 +3,15 @@ package onlineapi
 import (
 	"errors"
 	"fmt"
+	"math/rand"
+	"strings"
+	"time"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
-	"math/rand"
-	"strings"
-	"time"
+	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 )
 
 // Executor 网络空间资产搜索引擎interface
@@ -77,14 +79,10 @@ func Do(taskInfo execute.ExecutorTaskInfo) (result []OnlineSearchResult) {
 			return
 		}
 	}
-	// 请求参数的限制在任务里设置，不再从全局配置里读取
-	//config.SearchLimitCount = conf.GlobalWorkerConfig().API.SearchLimitCount
-	//if config.SearchPageSize = conf.GlobalWorkerConfig().API.SearchPageSize; config.SearchPageSize <= 0 {
-	//	config.SearchPageSize = pageSizeDefault
-	//}
+	targets := utils.MergeTarget(taskInfo.TargetMap[execute.TargetIp], taskInfo.TargetMap[execute.TargetRootDomain])
 	filterKeyword := loadFilterKeyword()
-	config.Target = taskInfo.Target
-	for _, line := range strings.Split(taskInfo.Target, ",") {
+	config.Target = targets
+	for _, line := range strings.Split(targets, ",") {
 		domain := strings.TrimSpace(line)
 		if domain == "" {
 			continue

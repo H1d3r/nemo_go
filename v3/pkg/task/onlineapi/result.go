@@ -2,13 +2,13 @@ package onlineapi
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/custom"
-	"github.com/hanc00l/nemo_go/v3/pkg/task/domainscan"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"strconv"
 )
 
 type OnlineSearchResult struct {
@@ -57,7 +57,7 @@ func ParseResult(config execute.ExecutorTaskInfo, searchResult []OnlineSearchRes
 	ip6l, _ := custom.NewIPv6Location()
 	cdn := custom.NewCDNCheck()
 	// 解析搜索结果，生成历史文档
-	tldExacter := domainscan.NewTldExtract()
+	tldExacter := utils.NewTldExtract()
 	for _, result := range searchResult {
 		host := utils.ParseHost(result.Host)
 		// 根据配置过滤

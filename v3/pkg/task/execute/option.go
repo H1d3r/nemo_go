@@ -3,19 +3,25 @@ package execute
 import "time"
 
 const (
-	ICP         = "icp"
-	LLMAPI      = "llmapi"
-	PortScan    = "portscan"
-	DomainScan  = "domainscan"
-	OnlineAPI   = "onlineapi"
-	FingerPrint = "fingerprint"
-	PocScan     = "pocscan"
-	Standalone  = "standalone"
+	ICP              = "icp"
+	LLMAPI           = "llmapi"
+	PortScan         = "portscan"
+	DomainScan       = "domainscan"
+	OnlineAPI        = "onlineapi"
+	FingerPrint      = "fingerprint"
+	PocScan          = "pocscan"
+	Standalone       = "standalone"
+	TargetIp         = "ip"
+	TargetRootDomain = "rootDomain"
+	TargetSubDomain  = "subDomain"
+	TargetUrl        = "url"
+	TargetEndpoint   = "endpoint"
+	TargetUnit       = "unit"
 )
 
 type MainTaskInfo struct {
-	Target        string `json:"target"`
-	ExcludeTarget string `json:"executeTarget,omitempty"`
+	TargetMap     map[string]string `json:"targetMap"`
+	ExcludeTarget string            `json:"executeTarget,omitempty"`
 
 	ExecutorConfig `json:"config"`
 	OrgId          string `json:"org,omitempty"`

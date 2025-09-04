@@ -2,13 +2,14 @@ package domainscan
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/custom"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"sync"
 )
 
 var (
@@ -103,7 +104,7 @@ func (r *Result) ParseResult(config execute.ExecutorTaskInfo) (docs []db.AssetDo
 	}
 
 	cdn := custom.NewCDNCheck()
-	tld := NewTldExtract()
+	tld := utils.NewTldExtract()
 	for domainName, domainResult := range r.DomainResult {
 		rootDomain := tld.ExtractFLD(domainName)
 		if rootDomain == "" {

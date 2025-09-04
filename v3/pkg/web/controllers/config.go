@@ -3,6 +3,10 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
@@ -11,9 +15,6 @@ import (
 	"github.com/hanc00l/nemo_go/v3/pkg/task/llmapi"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/onlineapi"
 	"github.com/remeh/sizedwaitgroup"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type ConfigController struct {
@@ -286,7 +287,7 @@ func testOnlineAPI(apiName string, swg *sizedwaitgroup.SizedWaitGroup, testMsgCh
 	taskInfo := execute.ExecutorTaskInfo{
 		MainTaskInfo: execute.MainTaskInfo{
 			WorkspaceId:    "test",
-			Target:         "fofa.info",
+			TargetMap:      map[string]string{execute.TargetRootDomain: "fofa.info"},
 			OrgId:          "test",
 			MainTaskId:     "onlineapi_test",
 			ExecutorConfig: executorConfig,
@@ -317,7 +318,7 @@ func testICPAPI(apiName string, swg *sizedwaitgroup.SizedWaitGroup, testMsgChan 
 	taskInfo := execute.ExecutorTaskInfo{
 		MainTaskInfo: execute.MainTaskInfo{
 			WorkspaceId:    "test",
-			Target:         "fofa.info",
+			TargetMap:      map[string]string{execute.TargetRootDomain: "fofa.info"},
 			OrgId:          "test",
 			MainTaskId:     "icp_test",
 			ExecutorConfig: executorConfig,
@@ -345,7 +346,7 @@ func testICPPlusAPI(apiName string, swg *sizedwaitgroup.SizedWaitGroup, testMsgC
 	taskInfo := execute.ExecutorTaskInfo{
 		MainTaskInfo: execute.MainTaskInfo{
 			WorkspaceId:    "test",
-			Target:         "厦门享联科技有限公司",
+			TargetMap:      map[string]string{execute.TargetUnit: "厦门享联科技有限公司"},
 			OrgId:          "test",
 			MainTaskId:     "icp_test",
 			ExecutorConfig: executorConfig,
@@ -375,7 +376,7 @@ func testLLMApi(apiName string, swg *sizedwaitgroup.SizedWaitGroup, testMsgChan 
 	taskInfo := execute.ExecutorTaskInfo{
 		MainTaskInfo: execute.MainTaskInfo{
 			WorkspaceId:    "test",
-			Target:         "百度在线网络技术（北京）有限公司",
+			TargetMap:      map[string]string{execute.TargetUnit: "百度在线网络技术（北京）有限公司"},
 			OrgId:          "test",
 			MainTaskId:     "llmtest",
 			ExecutorConfig: executorConfig,

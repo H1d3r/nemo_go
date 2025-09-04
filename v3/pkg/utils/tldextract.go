@@ -1,9 +1,8 @@
-package domainscan
+package utils
 
 import (
 	"fmt"
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
-	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"github.com/joeguo/tldextract"
 	"path"
 )
@@ -15,7 +14,7 @@ type TldExtract struct {
 // NewTldExtract 创建TldExtract对象
 func NewTldExtract() TldExtract {
 	tldCachePath := path.Join(conf.GetRootPath(), "thirdparty/tldextract")
-	utils.MakePath(tldCachePath)
+	MakePath(tldCachePath)
 
 	t := TldExtract{}
 	t.extract, _ = tldextract.New(path.Join(tldCachePath, "tld.cache"), false)

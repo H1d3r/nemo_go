@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
@@ -11,7 +13,6 @@ import (
 	"github.com/hanc00l/nemo_go/v3/pkg/resource"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"path/filepath"
 )
 
 type Zombie struct {

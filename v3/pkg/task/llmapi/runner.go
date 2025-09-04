@@ -52,7 +52,7 @@ func Do(taskInfo execute.ExecutorTaskInfo) (result Result) {
 		logging.RuntimeLog.Errorf("executor %s not found", taskInfo.Executor)
 		return
 	}
-	for _, line := range strings.Split(taskInfo.Target, ",") {
+	for _, line := range strings.Split(taskInfo.TargetMap[execute.TargetUnit], ",") {
 		exeResult := executor.Run(line, api, config)
 		result = append(result, exeResult...)
 	}

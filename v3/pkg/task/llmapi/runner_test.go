@@ -1,8 +1,9 @@
 package llmapi
 
 import (
-	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"testing"
+
+	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 )
 
 func TestKimiRun(t *testing.T) {
@@ -14,7 +15,7 @@ func TestKimiRun(t *testing.T) {
 	taskInfo := execute.ExecutorTaskInfo{
 		MainTaskInfo: execute.MainTaskInfo{
 			WorkspaceId:    "test",
-			Target:         "",
+			TargetMap:      map[string]string{execute.TargetUnit: "百度在线网络技术（北京）有限公司"},
 			OrgId:          "test1",
 			MainTaskId:     "llmtest",
 			ExecutorConfig: executorConfig,
@@ -40,7 +41,7 @@ func TestRun(t *testing.T) {
 	taskInfo := execute.ExecutorTaskInfo{
 		MainTaskInfo: execute.MainTaskInfo{
 			WorkspaceId:    "test",
-			Target:         "百度在线网络技术（北京）有限公司",
+			TargetMap:      map[string]string{execute.TargetUnit: "百度在线网络技术（北京）有限公司"},
 			OrgId:          "test1",
 			MainTaskId:     "llmtest",
 			ExecutorConfig: executorConfig,

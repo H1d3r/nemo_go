@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
@@ -12,11 +18,6 @@ import (
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"github.com/tidwall/pretty"
-	"os"
-	"path/filepath"
-	"runtime"
-	"sort"
-	"strings"
 )
 
 type Nuclei struct {

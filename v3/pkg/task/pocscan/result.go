@@ -1,10 +1,11 @@
 package pocscan
 
 import (
-	"github.com/hanc00l/nemo_go/v3/pkg/db"
-	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"sync"
 	"time"
+
+	"github.com/hanc00l/nemo_go/v3/pkg/db"
+	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 )
 
 type Result struct {

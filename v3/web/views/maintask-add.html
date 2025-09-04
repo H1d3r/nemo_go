@@ -80,7 +80,7 @@
                             <div class="tab-content">
                                 <div class="tab-pane fade show active" id="maintaskinfo" role="tabpanel"
                                      aria-labelledby="maintaskinfo-tab">
-                                    <div class="form-group row border-bottom border-top pb-3 mb-3"
+                                    <div class="form-group row border-top pb-3 mb-3"
                                          style="padding-top: 20px;">
                                         <div class="col-md-2 form-group">
                                             <label for="target"><strong>任务执行的目标</strong>
@@ -93,6 +93,55 @@
                                                     <textarea class="form-control" id="target" rows="5"
                                                               placeholder="请输入任务目标，多个目标请用换行符分隔"
                                                               required></textarea>
+                                        </div>
+                                        <div class="col-md-2 form-group">
+                                            <div class="checkbox">
+                                                <label><input type="checkbox" id="is_tld_root_domain">
+                                                    提取主域名<i
+                                                            class="fa fa-question-circle"
+                                                            aria-hidden="true"
+                                                            title='从子域名中提取出主域名，例如：www.example.com提取出example.com。'></i>
+                                                </label>
+                                            </div>
+                                            <button class="btn btn-outline-info form-control" type="button"
+                                                    id="parseTarget">
+                                                <i class="fa fa-magic">智能解析目标</i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row border-bottom pb-3 mb-3">
+                                        <div class="col-md-2 form-group">
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label for="target_ip"><strong>IP/掩码子网</strong>(<span
+                                                    id="target_ip_count">0</span>)</label>
+                                            <textarea class="form-control" id="target_ip" rows="4"
+                                                      placeholder="请输入ip或掩码子网，多个目标请用换行符分隔"
+                                            ></textarea>
+                                            <label for="target_root_domain"><strong>主域名</strong>(<span
+                                                    id="target_root_domain_count">0</span>)</label>
+                                            <textarea class="form-control" id="target_root_domain" rows="4"
+                                                      placeholder="请输入主/根域名，多个目标请用换行符分隔"
+                                            ></textarea>
+                                            <label for="target_sub_domain"><strong>子域名</strong>(<span
+                                                    id="target_sub_domain_count">0</span>)</label>
+                                            <textarea class="form-control" id="target_sub_domain" rows="4"
+                                                      placeholder="请输入子域名，多个目标请用换行符分隔"
+                                            ></textarea>
+                                            <label for="target_unit"><strong>组织</strong>(<span id="target_unit_count">0</span>)</label>
+                                            <textarea class="form-control" id="target_unit" rows="4"
+                                                      placeholder="请输入单位名称，多个目标请用换行符分隔；只进行ICP备案任务"
+                                            ></textarea>
+                                            <label for="target_url"><strong>URL</strong>(<span
+                                                    id="target_url_count">0</span>)</label>
+                                            <textarea class="form-control" id="target_url" rows="4"
+                                                      placeholder="请输入URL格式的任务目标，多个目标请用换行符分隔；只进行指纹指纹识别或者poc验证"
+                                            ></textarea>
+                                            <label for="target_endpoint"><strong>端点</strong>(<span
+                                                    id="target_endpoint_count">0</span>)</label>
+                                            <textarea class="form-control" id="target_endpoint" rows="4"
+                                                      placeholder="请输入端点目标（ip:port或domain:port），多个目标请用换行符分隔；只进行指纹指纹识别或者poc验证"
+                                            ></textarea>
                                         </div>
                                     </div>
                                     <div class="form-group row border-bottom pb-3 mb-3">

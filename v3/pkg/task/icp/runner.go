@@ -2,12 +2,13 @@ package icp
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
-	"strings"
 )
 
 // Executor 用于icp、whois等api的interface
@@ -67,7 +68,12 @@ func Do(taskInfo execute.ExecutorTaskInfo, isDisableLookup bool) (result []DataR
 		logging.RuntimeLog.Errorf("子任务的executor配置不存在：%s", taskInfo.Executor)
 		return
 	}
-
+	var targets string
+	if taskInfo.Executor == "icp" || taskInfo.Executor == "icpPlus2" {
+		targets = taskInfo.TargetMap[execute.TargetRootDomain]
+	} else if taskInfo.Executor == "icpPlus" {
+		targets = taskInfo.TargetMap[execute.TargetUnit]
+	}
 	for _, apiName := range config.APIName {
 		var executor Executor
 		var apiKey APIKey
@@ -88,7 +94,7 @@ func Do(taskInfo execute.ExecutorTaskInfo, isDisableLookup bool) (result []DataR
 			continue
 		}
 
-		for _, domain := range strings.Split(taskInfo.Target, ",") {
+		for _, domain := range strings.Split(targets, ",") {
 			resultQuery := executor.Run(domain, apiKey.apiKey)
 			result = append(result, resultQuery...)
 		}

@@ -2,6 +2,8 @@ package workerapi
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
@@ -10,13 +12,24 @@ import (
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/fingerprint"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/icp"
-	"github.com/hanc00l/nemo_go/v3/pkg/task/llmapi"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/onlineapi"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/pocscan"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/portscan"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"strings"
 )
+
+func isTargetEmpty(config execute.ExecutorTaskInfo) bool {
+	if len(config.TargetMap) == 0 {
+		return true
+	}
+	for _, target := range config.TargetMap {
+		if len(target) > 0 {
+			return false
+		}
+	}
+
+	return true
+}
 
 func checkTask(configJSON string) (ok bool, config execute.ExecutorTaskInfo, result string, err error) {
 	if err = ParseConfig(configJSON, &config); err != nil {
@@ -24,7 +37,7 @@ func checkTask(configJSON string) (ok bool, config execute.ExecutorTaskInfo, res
 		result = FailedTask(err.Error())
 		return
 	}
-	if config.Target == "" {
+	if isTargetEmpty(config) {
 		logging.RuntimeLog.Warningf("任务目标为空，taskId:%s（任务目标可能未设置或者被阻止）", config.TaskId)
 		result = FailedTask("任务目标为空（任务目标可能未设置或者被阻止）")
 		return
@@ -37,9 +50,9 @@ func checkTask(configJSON string) (ok bool, config execute.ExecutorTaskInfo, res
 	return
 }
 
-func newNextExecutorTask(config execute.ExecutorTaskInfo, target string, executor string) (err error) {
+func newNextExecutorTask(config execute.ExecutorTaskInfo, targetMap map[string]string, executor string) (err error) {
 	executorConfig := config
-	executorConfig.Target = target
+	executorConfig.TargetMap = targetMap
 	executorConfig.Executor = executor
 	executorConfig.PreTaskId = config.TaskId
 	executorConfig.TaskId = uuid.New().String()
@@ -90,7 +103,8 @@ func domainDoPortscan(config execute.ExecutorTaskInfo, domainscanConfig execute.
 	ts := core.NewTaskSlice(portScanTarget, 0, 0)
 	targets := ts.SplitTargets()
 	for _, target := range targets {
-		_ = newNextExecutorTask(newConfig, target, domainscanConfig.ResultPortscanBin)
+		newTargetMap := utils.ReturnTypedTargetMap(execute.TargetIp, target)
+		_ = newNextExecutorTask(newConfig, newTargetMap, domainscanConfig.ResultPortscanBin)
 	}
 }
 
@@ -115,15 +129,16 @@ func doNextFingerAndPocscanExecutorTask(config execute.ExecutorTaskInfo, result 
 	var TaskSliceSize = 50
 	targetSlice := getResultTarget(result, TaskSliceSize)
 	for _, target := range targetSlice {
+		newTargetMap := utils.ReturnListTypedTargetMap(execute.TargetEndpoint, target)
 		if doFingerprint && len(config.FingerPrint) > 0 {
 			for executor, _ := range config.FingerPrint {
-				_ = newNextExecutorTask(config, strings.Join(target, ","), executor)
+				_ = newNextExecutorTask(config, newTargetMap, executor)
 			}
 		}
 		// 如果有指纹识别，则在指纹识别结果中新建pocscan的任务
 		if !doFingerprint && len(config.PocScan) > 0 {
 			for executor, _ := range config.PocScan {
-				_ = newNextExecutorTask(config, strings.Join(target, ","), executor)
+				_ = newNextExecutorTask(config, newTargetMap, executor)
 			}
 		}
 	}
@@ -255,7 +270,7 @@ func Fingerprint(configJSON string) (result string, err error) {
 				for target, newPocConfig := range targetPocMapResult {
 					newConfig := config
 					newConfig.PocScan["nuclei"] = newPocConfig
-					_ = newNextExecutorTask(newConfig, target, "nuclei")
+					_ = newNextExecutorTask(newConfig, utils.ReturnTypedTargetMap(execute.TargetEndpoint, target), "nuclei")
 				}
 			}
 			// 如果有密码爆破，则匹配service，并启动zombie任务
@@ -264,7 +279,7 @@ func Fingerprint(configJSON string) (result string, err error) {
 				if len(serviceTargets) > 0 {
 					newConfig := config
 					newConfig.PocScan["zombie"] = pocscanConfig
-					_ = newNextExecutorTask(newConfig, strings.Join(serviceTargets, ","), "zombie")
+					_ = newNextExecutorTask(newConfig, utils.ReturnListTypedTargetMap(execute.TargetUrl, serviceTargets), "zombie")
 				}
 			}
 		} else {
@@ -309,42 +324,6 @@ func PocScan(configJSON string) (result string, err error) {
 		return FailedTask(err.Error()), err
 	}
 
-	return SucceedTask(result), nil
-}
-
-func LLMScan(configJSON string) (result string, err error) {
-	var ok bool
-	var config execute.ExecutorTaskInfo
-	ok, config, result, err = checkTask(configJSON)
-	if !ok || err != nil {
-		return
-	}
-	// 执行任务
-	taskResult := llmapi.Do(config)
-	// 结果不保存到数据库，只返回任务结果，并启动下一步任务
-	result = fmt.Sprintf("域名：%d%s", len(taskResult), taskResult)
-	// 如果任务获取到结果，则新建下一步任务(domainscan或者onlineapi)
-	if len(taskResult) > 0 {
-		var llmConfig execute.LLMAPIConfig
-		for _, v := range config.LLMAPI {
-			llmConfig = v
-			break
-		}
-		// 自动关联组织
-		if llmConfig.AutoAssociateOrg {
-			if orgId, err := callAssociateOrg(config.Target, config.WorkspaceId); err == nil && orgId != "" {
-				config.OrgId = orgId
-			}
-		}
-		for _, target := range taskResult {
-			for executor, _ := range config.DomainScan {
-				_ = newNextExecutorTask(config, target, executor)
-			}
-			for executor, _ := range config.OnlineAPI {
-				_ = newNextExecutorTask(config, target, executor)
-			}
-		}
-	}
 	return SucceedTask(result), nil
 }
 
@@ -398,15 +377,15 @@ func ICPScan(configJSON string) (result string, err error) {
 		for _, target := range domainResult {
 			if len(config.DomainScan) > 0 {
 				for executor, _ := range config.DomainScan {
-					_ = newNextExecutorTask(config, target, executor)
+					_ = newNextExecutorTask(config, utils.ReturnTypedTargetMap(execute.TargetRootDomain, target), executor)
 				}
 			} else if len(config.OnlineAPI) > 0 {
 				for executor, _ := range config.OnlineAPI {
-					_ = newNextExecutorTask(config, target, executor)
+					_ = newNextExecutorTask(config, utils.ReturnTypedTargetMap(execute.TargetRootDomain, target), executor)
 				}
 			} else if len(config.FingerPrint) > 0 {
 				for executor, _ := range config.FingerPrint {
-					_ = newNextExecutorTask(config, target, executor)
+					_ = newNextExecutorTask(config, utils.ReturnTypedTargetMap(execute.TargetEndpoint, target), executor)
 				}
 			}
 		}

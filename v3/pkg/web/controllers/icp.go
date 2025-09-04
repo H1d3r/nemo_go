@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"fmt"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/icp"
+	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -172,7 +174,7 @@ func doICPOnlineAPISearch(key string) (msg string, err error) {
 			WorkspaceId:    db.GlobalDatabase,
 			MainTaskId:     "icp_onlineapi",
 			ExecutorConfig: executorConfig,
-			Target:         key,
+			TargetMap:      utils.ReturnTypedTargetMap(execute.TargetRootDomain, key),
 		},
 		Executor: "icp",
 	}

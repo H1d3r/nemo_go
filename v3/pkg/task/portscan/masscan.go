@@ -1,6 +1,10 @@
 package portscan
 
 import (
+	"runtime"
+	"strconv"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
@@ -9,9 +13,6 @@ import (
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	gonmap "github.com/lair-framework/go-nmap"
-	"runtime"
-	"strconv"
-	"strings"
 )
 
 type Masscan struct {

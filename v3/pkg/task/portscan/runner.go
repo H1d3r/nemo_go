@@ -2,14 +2,15 @@ package portscan
 
 import (
 	"bytes"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"os"
-	"os/exec"
-	"strings"
 )
 
 type Executor interface {
@@ -57,7 +58,7 @@ func Do(taskInfo execute.ExecutorTaskInfo) (result Result) {
 		}
 	}
 	var targetIpV4, targetIpV6 []string
-	for _, target := range strings.Split(taskInfo.Target, ",") {
+	for _, target := range strings.Split(taskInfo.TargetMap[execute.TargetIp], ",") {
 		t := strings.TrimSpace(target)
 		if utils.CheckIPV4(t) || utils.CheckIPV4Subnet(t) {
 			targetIpV4 = append(targetIpV4, t)

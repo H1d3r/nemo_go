@@ -1,8 +1,9 @@
 package domainscan
 
 import (
-	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"testing"
+
+	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 )
 
 func TestResult_ParseResult(t *testing.T) {
@@ -15,7 +16,7 @@ func TestResult_ParseResult(t *testing.T) {
 	taskInfo := execute.ExecutorTaskInfo{
 		MainTaskInfo: execute.MainTaskInfo{
 			WorkspaceId:    "test",
-			Target:         "",
+			TargetMap:      map[string]string{execute.TargetRootDomain: "test.com"},
 			OrgId:          "test1",
 			MainTaskId:     "domaintest",
 			ExecutorConfig: executorConfig,

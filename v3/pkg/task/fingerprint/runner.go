@@ -2,13 +2,14 @@ package fingerprint
 
 import (
 	"bytes"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"os"
-	"os/exec"
-	"strings"
 )
 
 type Executor interface {
@@ -34,21 +35,20 @@ func NewExecutor(executeName string, config execute.FingerprintConfig, isProxy b
 
 func Do(taskInfo execute.ExecutorTaskInfo) (result Result) {
 	result = Result{FingerResults: make(map[string]interface{})}
-
 	if config, ok := taskInfo.FingerPrint["fingerprint"]; ok {
 		if len(config.PortList) > 0 {
 			portsListAll := utils.ParsePortList(config.PortList)
-			taskInfo.Target = utils.FormatTargetByPortList(taskInfo.Target, portsListAll)
+			taskInfo.TargetMap[execute.TargetEndpoint] = utils.FormatTargetByPortList(taskInfo.TargetMap[execute.TargetEndpoint], portsListAll)
 		}
 		if config.IsHttpx {
-			exeResult := do1("httpx", config, taskInfo.Target, taskInfo.IsProxy)
+			exeResult := do1("httpx", config, utils.MergeTarget(taskInfo.TargetMap[execute.TargetEndpoint], taskInfo.TargetMap[execute.TargetUrl]), taskInfo.IsProxy)
 			for domain, fingerResult := range exeResult.FingerResults {
 				result.FingerResults[domain] = fingerResult
 			}
 		}
 		if config.IsFingerprintx {
 			var targetsNew []string
-			for _, target := range strings.Split(taskInfo.Target, ",") {
+			for _, target := range strings.Split(taskInfo.TargetMap[execute.TargetEndpoint], ",") {
 				if _, exist := result.FingerResults[target]; !exist {
 					targetsNew = append(targetsNew, target)
 				}

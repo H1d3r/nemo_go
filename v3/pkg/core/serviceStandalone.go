@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
+	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"time"
 )
 
 type StandaloneRequestArgs struct {
@@ -78,7 +80,7 @@ func (s *Service) RequestStandaloneTask(ctx context.Context, args *string, repla
 		TaskId:    executorTasks[0].TaskId,
 		PreTaskId: executorTasks[0].PreTaskId,
 		MainTaskInfo: execute.MainTaskInfo{
-			Target:        executorTasks[0].Target,
+			TargetMap:     utils.UnmarshalTargetMap(executorTasks[0].Target),
 			ExcludeTarget: executorTasks[0].ExcludeTarget,
 			WorkspaceId:   executorTasks[0].WorkspaceId,
 			MainTaskId:    executorTasks[0].MainTaskId,

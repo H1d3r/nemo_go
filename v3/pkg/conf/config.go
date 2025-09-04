@@ -2,12 +2,13 @@ package conf
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (

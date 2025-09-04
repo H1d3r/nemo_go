@@ -2,10 +2,11 @@ package portscan
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
-	"sync"
 )
 
 const (

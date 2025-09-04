@@ -2,13 +2,14 @@ package pocscan
 
 import (
 	"bytes"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"os"
-	"os/exec"
-	"strings"
 )
 
 type Executor interface {
@@ -51,9 +52,9 @@ func Do(taskInfo execute.ExecutorTaskInfo) (result Result) {
 		}
 	}
 	if executor.IsExecuteFromCmd() {
-		runByCmd(executor, strings.Split(taskInfo.Target, ","), &result)
+		runByCmd(executor, strings.Split(utils.MergeTarget(taskInfo.TargetMap[execute.TargetEndpoint], taskInfo.TargetMap[execute.TargetUrl]), ","), &result)
 	} else {
-		exeResult := executor.Run(strings.Split(taskInfo.Target, ","))
+		exeResult := executor.Run(strings.Split(utils.MergeTarget(taskInfo.TargetMap[execute.TargetEndpoint], taskInfo.TargetMap[execute.TargetUrl]), ","))
 		for domain, vul := range exeResult.VulResult {
 			result.VulResult[domain] = vul
 		}

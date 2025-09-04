@@ -2,10 +2,8 @@ package utils
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
-	"github.com/hanc00l/nemo_go/v3/pkg/conf"
-	"github.com/hanc00l/nemo_go/v3/pkg/logging"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hanc00l/nemo_go/v3/pkg/conf"
+	"github.com/hanc00l/nemo_go/v3/pkg/logging"
+	"golang.org/x/net/proxy"
 )
 
 var Socks5Proxy string
@@ -214,27 +216,6 @@ func ParseHostUrl(u string) (isIpv6 bool, ip string, port int) {
 	return
 }
 
-// FormatHostUrl 将ipv4/v6生成url格式，ipv6生成url时，必须增加[]
-func FormatHostUrl(protocol, host string, port int) string {
-	var h string
-	if CheckIPV6(host) {
-		h = fmt.Sprintf("[%s]", host)
-	} else {
-		h = host
-	}
-	var hostPort string
-	if port > 0 {
-		hostPort = fmt.Sprintf("%s:%d", h, port)
-	} else {
-		hostPort = h
-	}
-	if len(protocol) > 0 {
-		return fmt.Sprintf("%s://%s", protocol, hostPort)
-	} else {
-		return hostPort
-	}
-}
-
 // GetProxyHttpClient 获取代理的http client
 func GetProxyHttpClient(isProxy bool) *http.Client {
 	var transport *http.Transport
@@ -264,19 +245,60 @@ func GetProxyHttpClient(isProxy bool) *http.Client {
 	return httpClient
 }
 
-// FindDomain 从字符串中提取域名
-func FindDomain(content string) []string {
-	domainPattern := `(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]`
-	r := regexp.MustCompile(strings.TrimSpace(domainPattern))
+func MergeTarget(targets ...string) string {
+	targetSet := make(map[string]struct{})
 
-	allResult := r.FindAllString(content, -1)
-	//去重：
-	ips := make(map[string]struct{})
-	for _, ip := range allResult {
-		if _, existed := ips[ip]; !existed {
-			ips[ip] = struct{}{}
+	for _, target := range targets {
+		if target == "" {
+			continue
+		}
+
+		// 避免不必要的Split操作：如果字符串不包含逗号，直接添加
+		if !strings.Contains(target, ",") {
+			targetSet[target] = struct{}{}
+			continue
+		}
+
+		// 对于包含逗号的字符串才进行Split
+		for _, t := range strings.Split(target, ",") {
+			if t != "" { // 避免空字符串
+				targetSet[t] = struct{}{}
+			}
 		}
 	}
 
-	return SetToSlice(ips)
+	if len(targetSet) == 0 {
+		return ""
+	}
+
+	// 直接在这里构建结果，避免额外的函数调用
+	result := make([]string, 0, len(targetSet))
+	for k := range targetSet {
+		result = append(result, k)
+	}
+	return strings.Join(result, ",")
+}
+
+func UnmarshalTargetMap(content string) (targetMap map[string]string) {
+	_ = json.Unmarshal([]byte(content), &targetMap)
+	return
+}
+
+func MarshalTargetMap(targetMap map[string]string) string {
+	content, _ := json.Marshal(targetMap)
+	return string(content)
+}
+
+func ReturnListTypedTargetMap(typeKey string, targets []string) (targetMap map[string]string) {
+	targetMap = make(map[string]string)
+	targetMap[typeKey] = strings.Join(targets, ",")
+	return
+
+}
+
+func ReturnTypedTargetMap(typeKey string, target string) (targetMap map[string]string) {
+	targetMap = make(map[string]string)
+	targetMap[typeKey] = target
+	return
+
 }

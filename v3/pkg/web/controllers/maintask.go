@@ -3,13 +3,15 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
+	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"time"
 )
 
 type MainTaskController struct {
@@ -895,7 +897,7 @@ func (c *MainTaskController) RedoExecutorTaskAction() {
 		TaskId:    uuid.New().String(),
 		PreTaskId: executorDoc.PreTaskId,
 		MainTaskInfo: execute.MainTaskInfo{
-			Target:          executorDoc.Target,
+			TargetMap:       utils.UnmarshalTargetMap(executorDoc.Target),
 			ExcludeTarget:   mainTaskDoc.ExcludeTarget,
 			ExecutorConfig:  executorConfig,
 			OrgId:           mainTaskDoc.OrgId,
@@ -1023,5 +1025,21 @@ func (c *MainTaskController) MaintaskTreeDataAction() {
 	} else {
 		c.FailedStatus("无子任务流程节点")
 	}
+	return
+}
+
+func (c *MainTaskController) ParseStringTargetAction() {
+	defer func(c *MainTaskController, encoding ...bool) {
+		_ = c.ServeJSON(encoding...)
+	}(c)
+
+	target := c.GetString("target")
+	isTldRootDomain, _ := c.GetBool("isTldRootDomain", false)
+	if target == "" {
+		c.FailedStatus("target参数不能为空！")
+		return
+	}
+	targetMap := core.ParseStringTargetToTargetMap(target, isTldRootDomain)
+	c.Data["json"] = targetMap
 	return
 }

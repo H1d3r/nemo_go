@@ -2,13 +2,14 @@ package domainscan
 
 import (
 	"bytes"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/core"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"os"
-	"os/exec"
-	"strings"
 )
 
 type Executor interface {
@@ -51,10 +52,11 @@ func Do(taskInfo execute.ExecutorTaskInfo) (result Result) {
 			return
 		}
 	}
+	allTarget := utils.MergeTarget(taskInfo.TargetMap[execute.TargetRootDomain], taskInfo.TargetMap[execute.TargetSubDomain])
 	if executor.IsExecuteFromCmd() {
-		runByCmd(executor, strings.Split(taskInfo.Target, ","), &result)
+		runByCmd(executor, strings.Split(allTarget, ","), &result)
 	} else {
-		exeResult := executor.Run(strings.Split(taskInfo.Target, ","))
+		exeResult := executor.Run(strings.Split(allTarget, ","))
 		for domain, domainResult := range exeResult.DomainResult {
 			result.DomainResult[domain] = domainResult
 		}

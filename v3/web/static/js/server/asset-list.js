@@ -62,9 +62,7 @@ $(function () {
                         let brOrg = "</br>";
                         if (row['org']) {
                             strData += brOrg + '<span title="所属组织" style="color:darkgray"><small>' + row['org'] + '</small></span>';
-                            brOrg = "</br>";
-                        } else {
-                            brOrg = "";
+                            brOrg = "/";
                         }
                         if (row['icp_company']) {
                             strData += brOrg + '<span title="ICP备案主体" style="color:darkgray"><small>' + row['icp_company'] + '</small></span>';
@@ -97,14 +95,16 @@ $(function () {
                     data: "ip", title: "IP-归属地", width: "10%",
                     render: function (data, type, row, meta) {
                         let strData = '';
-                        strData += '<div style="width:100%;white-space:normal;word-wrap:break-word;word-break:break-all;">' + data;
-                        if (row['location'] !== null) {
-                            strData += '</br>'
-                            for (let i in row['location']) {
-                                strData += '<span class="text-wrap"><small>' + row['location'][i] + '</small></span>&nbsp;';
+                        if (data != null) {
+                            strData += '<div style="width:100%;white-space:normal;word-wrap:break-word;word-break:break-all;">' + data;
+                            if (row['location'] !== null) {
+                                strData += '</br>'
+                                for (let i in row['location']) {
+                                    strData += '<span class="text-wrap"><small>' + row['location'][i] + '</small></span>&nbsp;';
+                                }
                             }
+                            strData += '</div>';
                         }
-                        strData += '</div>';
                         return strData;
                     }
                 },

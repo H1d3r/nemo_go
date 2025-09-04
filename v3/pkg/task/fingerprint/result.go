@@ -4,15 +4,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hanc00l/nemo_go/v3/pkg/core"
-	"github.com/hanc00l/nemo_go/v3/pkg/db"
-	"github.com/hanc00l/nemo_go/v3/pkg/logging"
-	"github.com/hanc00l/nemo_go/v3/pkg/task/domainscan"
-	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
-	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/hanc00l/nemo_go/v3/pkg/core"
+	"github.com/hanc00l/nemo_go/v3/pkg/db"
+	"github.com/hanc00l/nemo_go/v3/pkg/logging"
+	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
+	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 )
 
 type Result struct {
@@ -86,7 +86,7 @@ const (
 )
 
 func ParseResult(config execute.ExecutorTaskInfo, result *Result) (docs []db.AssetDocument, screenshot []core.ScreenShotResultArgs) {
-	tldExacter := domainscan.NewTldExtract()
+	tldExacter := utils.NewTldExtract()
 
 	for input, result := range result.FingerResults {
 		if fr, ok := result.(FingerprintxResult); ok {
@@ -103,7 +103,7 @@ func ParseResult(config execute.ExecutorTaskInfo, result *Result) (docs []db.Ass
 	return
 }
 
-func parseFingerprintxResult(config execute.ExecutorTaskInfo, authority string, result FingerprintxResult, tldExacter *domainscan.TldExtract) (doc db.AssetDocument) {
+func parseFingerprintxResult(config execute.ExecutorTaskInfo, authority string, result FingerprintxResult, tldExacter *utils.TldExtract) (doc db.AssetDocument) {
 	doc.Authority = authority
 	doc.Host = result.Host
 	doc.Port = result.Port
@@ -132,7 +132,7 @@ func parseFingerprintxResult(config execute.ExecutorTaskInfo, authority string, 
 	return
 }
 
-func parseHttpxResult(config execute.ExecutorTaskInfo, authority string, result HttpxResult, tldExacter *domainscan.TldExtract) (doc db.AssetDocument, screenshot *core.ScreenShotResultArgs) {
+func parseHttpxResult(config execute.ExecutorTaskInfo, authority string, result HttpxResult, tldExacter *utils.TldExtract) (doc db.AssetDocument, screenshot *core.ScreenShotResultArgs) {
 	doc.Authority = authority
 	doc.OrgId = config.OrgId
 	doc.TaskId = config.MainTaskId

@@ -71,6 +71,7 @@ func InitRouter() {
 	web.CtrlGet("/maintask-tree", (*controllers.MainTaskController).MaintaskTreeAction)
 	web.CtrlPost("/maintask-tree-data", (*controllers.MainTaskController).MaintaskTreeDataAction)
 	web.CtrlGet("/maintask-report", (*controllers.MainTaskController).MaintaskReportAction)
+	web.CtrlPost("/maintask-parse-target", (*controllers.MainTaskController).ParseStringTargetAction)
 
 	web.CtrlGet("/asset-list", (*controllers.AssetController).IndexAction)
 	web.CtrlPost("/asset-list", (*controllers.AssetController).ListAction)

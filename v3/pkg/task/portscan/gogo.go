@@ -6,6 +6,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"math"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	"github.com/chainreactors/utils/encode"
 	"github.com/chainreactors/utils/iutils"
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
@@ -15,11 +21,6 @@ import (
 	"github.com/hanc00l/nemo_go/v3/pkg/resource"
 	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
 	"github.com/hanc00l/nemo_go/v3/pkg/utils"
-	"io"
-	"math"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 type Gogo struct {

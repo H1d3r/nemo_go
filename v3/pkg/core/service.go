@@ -6,6 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/hanc00l/nemo_go/v3/pkg/conf"
 	"github.com/hanc00l/nemo_go/v3/pkg/db"
 	"github.com/hanc00l/nemo_go/v3/pkg/logging"
@@ -17,12 +24,6 @@ import (
 	"github.com/smallnest/rpcx/client"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
-	"sync"
-	"time"
 )
 
 // Service RPC服务
@@ -327,7 +328,7 @@ func (s *Service) SaveTaskResult(ctx context.Context, args *TaskAssetDocumentRes
 			if ipv6.Location == "" {
 				doc.Ip.IpV6[k].Location = ipl6.Find(ipv6.IPName)
 			}
-			if !doc.IsCloud && fCheckCloud(doc.Ip.IpV4[k].Location) {
+			if !doc.IsCloud && fCheckCloud(doc.Ip.IpV6[k].Location) {
 				doc.IsCloud = true
 			}
 		}
