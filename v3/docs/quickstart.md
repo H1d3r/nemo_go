@@ -24,13 +24,14 @@ Nemo使用的工具大部份已经集成在thirdparty目录中了，工具及资
 - Quake
 - Chinaz ICP备案查询
 - Chinaz企业备案查询API
+- beianx.com第三方备案查询API
 
 同时为了更好地使用Nemo的任务完成的消息通知机制，建议配置以下一个或多个通知平台的Token：
 - Server酱
 - 钉钉群机器人
 - 飞书群机器人
 
-为了使用在线AI大模型通过组织机构名称获取主域名信息，需要配置以下一个或多个大模型API Token：
+为了使用在线AI大模型生成任务报告，需要配置以下一个或多个大模型API Token：
 - 阿里通义千问
 - Kimi
 - Deepseek

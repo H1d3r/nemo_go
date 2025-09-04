@@ -12,7 +12,7 @@
 - 资产管理：IP和域名资产统一管理，支持组合的语义查询，精简和集中了资产的管理；
 - 指纹信息：HTTP指纹统一到Httpx，使用Fingerprinthub被动指纹识别，支持更多指纹识别方式；
 - Poc验证：只保留Nuclei方式的Poc验证，增加基于指纹和Poc的联动验证、弱口令自动爆破；
-- LLMAPI接口：新增通过Kimi、Qwen、Deepseek等LLMAPI接口去获取企业域名信息（有一定的幻觉）；
+- LLMAPI接口：新增通过Kimi、Qwen、Deepseek等LLMAPI接口辅助生成任务报告；
 - 企业备案信息：新增通过ChinaZ接口获取企业备案信息（高可靠性），实现给定企业名称实现自动化的信息收集；
 - 新增Standalone模式：支持单文件worker部署，无需依赖其他组件，适合实战中内网渗透的快速信息收集与Nemo的集成（后续在优化后开源）；
 - 新增MCP Server，为AI模型与外部数据源或工具提供交互接口；
@@ -46,8 +46,9 @@
 - [Hunter](https://hunter.qianxin.com/)
 - [ICP备案信息](http://icp.chinaz.com/)
 - [企业备案信息](https://www.chinaz.net/mall/a_POGZL6l6KS.html)
+- [第三方ICP备案接口](https://www.beianx.com/)
 
-### 4、LLMAPI接口获取企业域名信息（需提供相应的Token)
+### 4、LLMAPI接口生成任务报告（需提供相应的Token)
 
 - [Kimi](https://kimi.moonshot.cn/)
 - [Qwen](https://tongyi.aliyun.com/)
@@ -87,7 +88,7 @@
 - [ ] 资产管理优化（支持更多资产类型、资产搜索、资产导入导出）
 - [ ] 十万级分布式节点统一管理（支持节点管理、任务动态伸缩等）
 - [ ] ElasticSearch亿级海量数据检索（支持全文搜索、数据分析）
-- [ ] 大模型本地/API技术，提升信息收集效率和准确性
+- [] 大模型本地/API技术，提升信息收集效率和准确性
 - [ ] 前端重构（Vue，计划2026年V4.0版本）
 
 
