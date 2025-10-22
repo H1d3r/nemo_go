@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hanc00l/nemo_go/v3/pkg/core"
-	"github.com/hanc00l/nemo_go/v3/pkg/resource"
-	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
-	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/hanc00l/nemo_go/v3/pkg/core"
+	"github.com/hanc00l/nemo_go/v3/pkg/resource"
+	"github.com/hanc00l/nemo_go/v3/pkg/task/execute"
+	"github.com/hanc00l/nemo_go/v3/pkg/utils"
 )
 
 type FOFA struct {
@@ -95,18 +96,20 @@ func (f *FOFA) getFilterTitleKeyword(filterKeyword map[string]struct{}) string {
 
 func (f *FOFA) Run(query string, apiKey string, pageIndex int, pageSize int, config execute.OnlineAPIConfig) (pageResult []OnlineSearchResult, sizeTotal int, err error) {
 	fields := "domain,host,ip,port,title,country,city,server,banner,protocol,cert"
+	//fofa api请求只要求key（不再需要email）
+	var key string
 	arr := strings.Split(apiKey, ":")
-	if len(arr) != 2 {
-		err = errors.New(fmt.Sprintf("fofa的apiKey格式错误：%s", apiKey))
-		return
+	if len(arr) == 2 {
+		key = arr[1]
+	} else {
+		key = apiKey
 	}
 	request, err := http.NewRequest(http.MethodGet, "https://fofa.info/api/v1/search/all", nil)
 	if err != nil {
 		return
 	}
 	params := make(url.Values)
-	params.Add("email", arr[0])
-	params.Add("key", arr[1])
+	params.Add("key", key)
 	params.Add("qbase64", base64.StdEncoding.EncodeToString([]byte(query)))
 	params.Add("fields", fields)
 	params.Add("page", strconv.Itoa(pageIndex))
